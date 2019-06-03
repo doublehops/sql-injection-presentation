@@ -80,35 +80,35 @@
                 <section>
                     <h2>An Example</h2>
                     <p class="code-label">Search user form</p>
-					<pre><code><form action="/search" method="get">
+                    <pre><code><form action="/search" method="get">
     <input type="text" name="search" value="" />
     <input type="submit" name="submit" value="Search" />
 </form></code></pre>
-					
-					<p class="code-label">Bad backend code</p>
-					<pre><code>$search = $_GET['search'] ?? null;
+                    
+                    <p class="code-label">Bad backend code</p>
+                    <pre><code>$search = $_GET['search'] ?? null;
 
 $db = new PDO('mysql:host=localhost;dbname=proj', 'someusername', 'somepassword');
 
 $sql = "SELECT * FROM user WHERE last_name='$search'";
 $stmt = $db->prepare($sql);
 $stmt->execute</code></pre>
-					
-					<p class="code-label">Good backend code</p>
-					<pre><code>$sql = "SELECT * FROM user WHERE last_name=':search'";
+                    
+                    <p class="code-label">Good backend code</p>
+                    <pre><code>$sql = "SELECT * FROM user WHERE last_name=':search'";
 $stmt = $db->prepare($sql);
 $stmt = $db->bindParam([':search' => $search], PDO::PARAM_STR);
 $stmt->execute</code></pre>
 
-     			</section>
+                 </section>
 
-				<section>
-					<h2>Exploiting the bad code</h2>
-					<p class="code-label">Bad user input</p>
-					<img src="images/webform1-enlarged.png" alt="Web form 1" />
-					
-					<p class="code-label">Resulting query</p>
-					<pre><code>$sql = "SELECT * FROM user WHERE last_name='xxxx'); UPDATE user SET last_name='Jones';''";</code></pre>
+                <section>
+                    <h2>Exploiting the bad code</h2>
+                    <p class="code-label">Bad user input</p>
+                    <img src="images/webform1-enlarged.png" alt="Web form 1" />
+                    
+                    <p class="code-label">Resulting query</p>
+                    <pre><code>$sql = "SELECT * FROM user WHERE last_name='xxxx'); UPDATE user SET last_name='Jones';''";</code></pre>
                 </section>
 
                 <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
