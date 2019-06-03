@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Exploiting SQL Injection - Melbourne Identity and Security Meetup - June 2019</title>
+
+        <meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+        <meta name="author" content="Hakim El Hattab">
+
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <link rel="stylesheet" href="reveal/css/reveal.min.css">
+        <link rel="stylesheet" href="reveal/css/theme/default.css" id="theme">
+
+        <!-- For syntax highlighting -->
+        <link rel="stylesheet" href="reveal/lib/css/zenburn.css">
+
+        <!-- If the query includes 'print-pdf', use the PDF print sheet -->
+        <script>
+            document.write( '<link rel="stylesheet" href="reveal/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+        </script>
+
+        <link rel="stylesheet" href="css/custom.css" />
+        <!--[if lt IE 9]>
+        <script src="reveal/lib/js/html5shiv.js"></script>
+        <![endif]-->
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+
+                <section>
+                    <h2>Gaining Shell Access by Exploiting an SQL Injection Vulnerability</h2>
+
+                    <h3 class="margin-top-medium">Melbourne Identity and Security Meetup - June 2019</h3>
+
+                    <h3 class="margin-top-medium">Damien Buttler</h3>
+                    <ul>
+                        <li>damien@doublehops.com</li>
+                        <li>www.doublehops.com</li>
+                        <li>@doublehops</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <p>OWASP consider injection as the most seen vulnerability in web applications.</p>
+                    <ol>
+                        <li class="emphasize">Injection</li>
+                        <li>Broken Authentication</li>
+                        <li>Sensitive data exposure</li>
+                        <li>XML External Entities (XXE)</li>
+                        <li>Broken Access control</li>
+                        <li>Security misconfigurations</li>
+                        <li>Cross Site Scripting (XSS)</li>
+                        <li>Insecure Deserialization</li>
+                        <li>Using Components with known vulnerabilities</li>
+                        <li>Insufficient logging and monitoring</li>
+                    </ol>
+
+                    <p class="margin-top-medium">OWASP: Open Web Application Security Project</p>
+                </section>
+
+                <section>
+                    <h2>What is SQL Injection?</h2>
+                    <h4>According to OWASP:</h4>
+                    <p>An injection of code happens when an attacker sends invalid data to the web application with the intention to make it do something different from what the application was designed/programmed to do.</p>
+                    <p>Perhaps the most common example around this security vulnerability is the SQL query consuming untrusted data.</p>
+                    <p>For example, a search form could pass the payload into an SQL query if not handled properly.</p>
+                </section>
+
+                <section>
+                    <h2>An Example</h2>
+                    <p class="code-label">Search user form</p>
+					<pre><code><form action="/search" method="get">
+    <input type="text" name="search" value="" />
+    <input type="submit" name="submit" value="Search" />
+</form></code></pre>
+					
+					<p class="code-label">Bad backend code</p>
+					<pre><code>$search = $_GET['search'] ?? null;
+
+$db = new PDO('mysql:host=localhost;dbname=proj', 'someusername', 'somepassword');
+
+$sql = "SELECT * FROM user WHERE last_name='$search'";
+$stmt = $db->prepare($sql);
+$stmt->execute</code></pre>
+					
+					<p class="code-label">Good backend code</p>
+					<pre><code>$sql = "SELECT * FROM user WHERE last_name=':search'";
+$stmt = $db->prepare($sql);
+$stmt = $db->bindParam([':search' => $search], PDO::PARAM_STR);
+$stmt->execute</code></pre>
+
+     			</section>
+
+				<section>
+					<h2>Exploiting the bad code</h2>
+					<p class="code-label">Bad user input</p>
+					<img src="images/webform1-enlarged.png" alt="Web form 1" />
+					
+					<p class="code-label">Resulting query</p>
+					<pre><code>$sql = "SELECT * FROM user WHERE last_name='xxxx'); UPDATE user SET last_name='Jones';''";</code></pre>
+                </section>
+
+                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
+                    <h2>Vagrant</h2>
+                    <p>
+                        Vagrant is a lightweight, easy to use Virtualbox wrapper that will create a virtual machine, install an OS and pass control to a provisioner script for configuration.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Configure Vagrant with a Single File</h2>
+                    <p class="filename">File: ./Vagrantfile</p>
+                    <pre><code>
+config.vm.box = "debian/stretch"
+
+config.vm.hostname = 'debian-web';
+
+config.vm.network :private_network, ip: "192.168.30.105"
+
+config.vm.synced_folder "./www", "/var/www", id: "vagrant-root", :group=>'www-data', :mount_options=>['dmode=775,fmode=775']
+
+config.vm.provision "ansible" do |ansible|
+   ansible.playbook = "provisioners/playbook.yml"
+   ansible.inventory_path = "provisioners/ansible_hosts"
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Common Vagrant Commands</h2>
+                    <ul>
+                        <li>vagrant init</li>
+                        <li>vagrant up</li>
+                        <li>vagrant provision</li>
+                        <li>vagrant status</li>
+                        <li>vagrant ssh</li>
+                        <li>vagrant reload</li>
+                        <li>vagrant suspend</li>
+                        <li>vagrant halt</li>
+                        <li>vagrant destroy</li>
+                    </ul>
+                </section>
+
+                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
+                    <h2>Ansible</h2>
+                    <p>Ansible is an automation tool for configuration and deployment.</p>
+                    <ul>
+                        <li>Is an alternative to Puppet and Chef</li>
+                        <li>Works over SSH so no need for agents on remote hosts</li>
+                        <li>Uses YAML markup for commands</li>
+                        <li>Great documentation</li>
+                        <li>Very logical commands and syntax</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Example Playbook</h2>
+                    <p class="filename">File: provisioners/playbook.yml</p>
+                    <pre><code>---
+- hosts: webservers
+  user: vagrant
+  sudo: yes
+
+  roles:
+    - common
+    - add_ppas
+    - php7
+    - database
+    - webserver
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example Task (Add PPAs)</h2>
+                    <p class="filename">File: provisioners/roles/common/tasks/add_ppas.yml</p>
+                    <pre><code>---
+  - name: Add dotdeb main
+    apt_repository: repo='deb http://packages.dotdeb.org wheezy all' state=present
+  - name: Add dotdeb main src
+    apt_repository: repo='deb-src http://packages.dotdeb.org wheezy all' state=present
+  - name: Add dotdeb php7.25
+    apt_repository: repo='deb http://packages.dotdeb.org wheezy-php7.25 all' state=present
+  - name: Add dotdeb php7.25 src
+    apt_repository: repo='deb-src http://packages.dotdeb.org wheezy-php7.25 all' state=present
+
+  - name: APT | Install DotDeb key
+    apt_key: url='http://www.dotdeb.org/dotdeb.gpg' state=present
+    tags: dotdeb
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example of a variables file</h2>
+                    <p class="filename">File: provisioners/roles/webserver/vars/main.yml</p>
+                    <pre><code>---
+  hostname: ansible.pres
+  docroot: /var/www/web
+  log_file_type: apache2
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example Nginx Host File</h2>
+                    <p class="filename">File: provisioners/roles/webservers/templates/local_dev.j2</p>
+                    <pre><code>server {
+    listen    80;
+
+    server_name {{ hostname }};
+
+    root {{ docroot }};
+    index index.php;
+
+    access_log  /var/log/nginx/access.log;
+    error_log   /var/log/nginx/error.log info;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+        expires 24h;
+    }
+
+    location ~ \.php$ {
+    
+        fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        include        fastcgi_params;
+    }
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    location ~ /\.(ht|svn|git|sql) {
+        deny all;
+    }
+
+    sendfile off;
+}
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example Task (Nginx)</h2>
+                    <p class="filename">File: provisioners/roles/webserver/tasks/main.yml</p>
+                    <pre><code>---
+  - include_vars: "vars/{{ env }}.yml"
+  
+  - name: Nginx | Install Nginx
+    apt:
+      pkg=nginx
+      state=latest
+      force=yes
+    become: true
+  
+  - name: Nginx | Ensure Nginx is running
+    service: name=nginx state=started
+    become: true
+  
+  - name: Nginx | Check that path /var/www exists
+    file: dest=/var/www
+          state=directory
+          owner={{ system_user }}
+          group={{ system_user }}
+    become: true
+  
+  - name: Nginx | Copy host file
+    template: src="templates/local_dev_nginx-debian.j2"
+              dest=/etc/nginx/sites-available/default.conf
+              mode=0700
+    notify: nginx-restart
+    become: true
+
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example Task (PHP)</h2>
+                    <p class="filename">File: provisioners/roles/common/tasks/php.yml</p>
+                    <pre><code>---
+  - name: PHP | Install PHP7
+    apt: pkg={{ item }} state=latest force=yes
+    with_items:
+      - php7.2-fpm
+      - php7.2-mysql
+      - php7.2-cli
+      - php7.2-curl
+
+  - name: PHP | Copy PHP config file
+    copy: src="{{ templates_dir }}/php/php.ini" dest=/etc/php7.2/fpm/php.ini owner=root group=root force=yes
+    notify: 
+    - php-fpm-restart
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Example Handler (PHP)</h2>
+                    <p class="filename">File: provisioners/roles/common/handlers/php.yml</p>
+                    <pre><code>---
+  - name: php-fpm-start
+    service: name=php7.2-fpm state=started
+  
+  - name: php-fpm-restart
+    service: name=php7.2-fpm state=restarted
+  
+  - name: php-fpm-stop
+    service: name=php7.2-fpm state=stopped
+                    </code></pre>
+                </section>
+
+                <section>
+                    <h2>Ansible Hosts file</h2>
+                        <p>The `provisioners/ansible_hosts` file contains the list of servers that can be provisioned by Ansible. It is divided into groups to manage them as groups.</p>
+                    <pre class="shell">
+[local_dev]
+192.168.30.105 system_user=vagrant env=local_dev
+
+[staging]
+203.184.xxx.xxx system_user=ubuntu env=staging
+203.184.xxx.xxx system_user=ubuntu env=staging
+
+[prod]
+203.184.xxx.xxx system_user=ubuntu env=prod
+203.184.xxx.xxx system_user=ubuntu env=prod
+                    </pre>
+                </section>
+
+                <section>
+                    <h2>Running the Provisioner</h2>
+                    <h3 class="left-align">Run the script</h3>
+                    <pre class="shell">
+ansible-playbook provisioners/playbook.yml -i "provisioners/ansible_hosts" \
+--private-key .vagrant/machines/default/virtualbox/private_key \
+--limit local_dev
+                    </pre>
+                    <h3 class="left-align">Output</h3>
+                    <pre class="shell">
+TASK [webserver : Nginx | Install Nginx] ******************************************
+<span class="ok">OK: [192.168.30.105]</span>
+
+TASK [webserver : Nginx | Copy host file] *****************************************
+<span class="changed">changed: [192.168.30.105]</span>
+
+RUNNING HANDLER [php7 : php-restart] **********************************************
+<span class="failed">fatal: [192.168.30.105]: FAILED! => {"changed": false, "msg": "Unsupported par...</span>
+                    </pre>
+                </section>
+
+                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
+                    <h2>Live Demo</h2>
+                    <ul>
+                        <li>Create fresh working path</li>
+                        <li>Checkout project from Github</li>
+                        <li>Add record to /etc/hosts (192.168.30.105 ansible.pres)</li>
+                        <li>Run `vagrant up`</li>
+                        <li>Point browser to http://192.168.30.105/</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3>Tool Links</h3>
+                    <ul>
+                        <li>Vagrant: <a href="http://vagrantup.com">www.vagrantup.com</a></li>
+                        <li>Vagrant boxes: <a href="http://www.vagrantbox.es/">www.vagrantbox.es/</a></li>
+                        <li>Ansible: <a href="http://www.ansible.com/home">www.ansible.com</a></li>
+                        <li>Debian webdev Vagrant/Ansible scripts: <a href="https://github.com/doublehops/debian-webdev-environment">github.com/doublehops/debian-webdev-environment</a></li>
+                    </ul>
+                    <h3 class="margin-top-medium">Presentation Links</h3>
+                    <ul>
+                        <li>This Reveal.js presentation: <a href="https://github.com/doublehops/ansible-presentation-provisioner">https://github.com/doublehops/ansible-presentation-provisioner</a></li>
+                        <li>The Ansible script: <a href="https://github.com/doublehops/ansible-presentation">https://github.com/doublehops/ansible-presentation</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h1>THE END</h1>
+                    <h3 class="margin-top-medium">Damien Buttler</h3>
+                    <ul>
+                        <li>@doublehops</li>
+                        <li>damien@doublehops.com</li>
+                    </ul>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="reveal/lib/js/head.min.js"></script>
+        <script src="reveal/js/reveal.min.js"></script>
+
+        <script>
+
+            // Full list of configuration options available here:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
+
+                theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+                transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+                // Parallax scrolling
+                // parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+                // parallaxBackgroundSize: '2100px 900px',
+
+                // Optional libraries used to extend on reveal.js
+                dependencies: [
+                    { src: 'reveal/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: 'reveal/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'reveal/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'reveal/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: 'reveal/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    { src: 'reveal/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+                ]
+            });
+
+        </script>
+
+    </body>
+</html>

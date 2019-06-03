@@ -1,0 +1,77 @@
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+    text-transform: none;
+}
+
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+    text-align: left;
+}
+
+p {
+    text-align: left;
+}
+
+.reveal p.code-label {
+    font-size: 0.6em;
+    margin-top: 35px;
+}
+
+.reveal li, .reveal p {
+    font-size: 1.0em;
+}
+
+.reveal li.emphasize {
+    font-weight: bold;
+    color: orange;
+}
+
+.reveal .margin-top-medium {
+    margin-top: 100px;
+}
+
+.reveal .filename {
+    margin-top: 75px;
+    font-size: 0.5em;
+    text-align: left;
+}
+
+.reveal pre {
+    border: 1px solid #999;
+    width: 100%;
+    font-size: 20px;
+}
+
+.reveal .legend {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.reveal pre.shell {
+    padding: 10px;
+    color: white;
+    background-color: black;
+}
+
+.shell .ok {
+    color: green
+}
+
+.shell .changed {
+    color: orange
+}
+
+.shell .failed {
+    color: red
+}
+
+.reveal .left-align {
+    text-align: left;
+}

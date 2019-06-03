@@ -1,0 +1,6 @@
+#!/bin/bash
+
+SRC=.
+DEST=dhwebsyd:/var/www/doublehops.com/presentations/ansible-meetup-presentation
+
+rsync -avz --exclude-from rsync-exclude $SRC $DEST
