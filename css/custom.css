@@ -18,6 +18,10 @@ p {
     text-align: left;
 }
 
+.reveal .center {
+    text-align: center;
+}
+
 .reveal p.code-label {
     font-size: 0.6em;
     margin-top: 35px;

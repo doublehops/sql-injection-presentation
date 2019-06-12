@@ -43,12 +43,19 @@
 
                     <h3 class="margin-top-medium">Melbourne Identity and Security Meetup - June 2019</h3>
 
-                    <h3 class="margin-top-medium">Damien Buttler</h3>
+                    <h3 class="margin-top-medium center">Damien Buttler</h3>
                     <ul>
                         <li>damien@doublehops.com</li>
                         <li>www.doublehops.com</li>
                         <li>@doublehops</li>
                     </ul>
+                </section>
+
+                <section>
+                    <h2>What is SQL Injection?</h2>
+                    <h4>According to OWASP:</h4>
+                    <p><em>An injection of code happens when an attacker sends invalid data to the web application with the intention to make it do something different from what the application was designed/programmed to do.</em></p>
+                    <p><em>Perhaps the most common example around this security vulnerability is the SQL query consuming untrusted data.</em></p>
                 </section>
 
                 <section>
@@ -70,15 +77,7 @@
                 </section>
 
                 <section>
-                    <h2>What is SQL Injection?</h2>
-                    <h4>According to OWASP:</h4>
-                    <p>An injection of code happens when an attacker sends invalid data to the web application with the intention to make it do something different from what the application was designed/programmed to do.</p>
-                    <p>Perhaps the most common example around this security vulnerability is the SQL query consuming untrusted data.</p>
-                    <p>For example, a search form could pass the payload into an SQL query if not handled properly.</p>
-                </section>
-
-                <section>
-                    <h2>An Example</h2>
+                    <h2>An Example of Vulrenable Code</h2>
                     <p class="code-label">Search user form</p>
                     <pre><code><form action="/search" method="get">
     <input type="text" name="search" value="" />
@@ -92,13 +91,13 @@ $db = new PDO('mysql:host=localhost;dbname=proj', 'someusername', 'somepassword'
 
 $sql = "SELECT * FROM user WHERE last_name='$search'";
 $stmt = $db->prepare($sql);
-$stmt->execute</code></pre>
+$stmt->execute();</code></pre>
                     
                     <p class="code-label">Good backend code</p>
                     <pre><code>$sql = "SELECT * FROM user WHERE last_name=':search'";
 $stmt = $db->prepare($sql);
 $stmt = $db->bindParam([':search' => $search], PDO::PARAM_STR);
-$stmt->execute</code></pre>
+$stmt->execute();</code></pre>
 
                  </section>
 
@@ -107,6 +106,9 @@ $stmt->execute</code></pre>
                     <p class="code-label">Bad user input</p>
                     <img src="images/webform1-enlarged.png" alt="Web form 1" />
                     
+                    <p class="code-label">Initial query</p>
+                    <pre><code>$sql = "SELECT * FROM user WHERE last_name='$search'";</code></pre>
+
                     <p class="code-label">Resulting query</p>
                     <pre><code>$sql = "SELECT * FROM user WHERE last_name='xxxx'); UPDATE user SET last_name='Jones';''";</code></pre>
                 </section>
