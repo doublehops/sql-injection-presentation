@@ -113,280 +113,42 @@ $stmt->execute();</code></pre>
                     <pre><code>$sql = "SELECT * FROM user WHERE last_name='xxxx'); UPDATE user SET last_name='Jones';''";</code></pre>
                 </section>
 
-                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
-                    <h2>Vagrant</h2>
+                <section>
+                    <h2>Live demo</h2>
+                    <p>Follow the live demo from <br />
+                        <a href="https://github.com/doublehops/sql-injection-attack-example">https://github.com/doublehops/sql-injection-attack-example</a></p>
+                </section>
+
+                <section>
+                    <h2>Finding Vulnerable Endpoints</h2>
+                    <p>There are several tools available that will find vulnerable endpoints with the most popular being <em>sqlmap.</em></p>
                     <p>
-                        Vagrant is a lightweight, easy to use Virtualbox wrapper that will create a virtual machine, install an OS and pass control to a provisioner script for configuration.
+                        <a href="images/sqlmap-example.png"><img src="images/sqlmap-example.png" alt="sqlmap example" /></a>
                     </p>
                 </section>
 
                 <section>
-                    <h2>Configure Vagrant with a Single File</h2>
-                    <p class="filename">File: ./Vagrantfile</p>
-                    <pre><code>
-config.vm.box = "debian/stretch"
-
-config.vm.hostname = 'debian-web';
-
-config.vm.network :private_network, ip: "192.168.30.105"
-
-config.vm.synced_folder "./www", "/var/www", id: "vagrant-root", :group=>'www-data', :mount_options=>['dmode=775,fmode=775']
-
-config.vm.provision "ansible" do |ansible|
-   ansible.playbook = "provisioners/playbook.yml"
-   ansible.inventory_path = "provisioners/ansible_hosts"
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Common Vagrant Commands</h2>
+                    <h2>Prevention</h2>
+                        <p>Some basic things to prevent SQL injection attacks are:</p>
                     <ul>
-                        <li>vagrant init</li>
-                        <li>vagrant up</li>
-                        <li>vagrant provision</li>
-                        <li>vagrant status</li>
-                        <li>vagrant ssh</li>
-                        <li>vagrant reload</li>
-                        <li>vagrant suspend</li>
-                        <li>vagrant halt</li>
-                        <li>vagrant destroy</li>
-                    </ul>
-                </section>
-
-                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
-                    <h2>Ansible</h2>
-                    <p>Ansible is an automation tool for configuration and deployment.</p>
-                    <ul>
-                        <li>Is an alternative to Puppet and Chef</li>
-                        <li>Works over SSH so no need for agents on remote hosts</li>
-                        <li>Uses YAML markup for commands</li>
-                        <li>Great documentation</li>
-                        <li>Very logical commands and syntax</li>
+                        <li>Don't be lazy and bind the variables into the queries</li>
+                        <li>Configure MySQL so that `INTO OUTFILE` is disabled</li>
+                        <li>Configure your firewall to prevent outgoing connections other than the ones the application requires.</p>
+                        <li>Test endpoints with a tool such as <em>sqlmap</em></li>
                     </ul>
                 </section>
 
                 <section>
-                    <h2>Example Playbook</h2>
-                    <p class="filename">File: provisioners/playbook.yml</p>
-                    <pre><code>---
-- hosts: webservers
-  user: vagrant
-  sudo: yes
-
-  roles:
-    - common
-    - add_ppas
-    - php7
-    - database
-    - webserver
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example Task (Add PPAs)</h2>
-                    <p class="filename">File: provisioners/roles/common/tasks/add_ppas.yml</p>
-                    <pre><code>---
-  - name: Add dotdeb main
-    apt_repository: repo='deb http://packages.dotdeb.org wheezy all' state=present
-  - name: Add dotdeb main src
-    apt_repository: repo='deb-src http://packages.dotdeb.org wheezy all' state=present
-  - name: Add dotdeb php7.25
-    apt_repository: repo='deb http://packages.dotdeb.org wheezy-php7.25 all' state=present
-  - name: Add dotdeb php7.25 src
-    apt_repository: repo='deb-src http://packages.dotdeb.org wheezy-php7.25 all' state=present
-
-  - name: APT | Install DotDeb key
-    apt_key: url='http://www.dotdeb.org/dotdeb.gpg' state=present
-    tags: dotdeb
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example of a variables file</h2>
-                    <p class="filename">File: provisioners/roles/webserver/vars/main.yml</p>
-                    <pre><code>---
-  hostname: ansible.pres
-  docroot: /var/www/web
-  log_file_type: apache2
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example Nginx Host File</h2>
-                    <p class="filename">File: provisioners/roles/webservers/templates/local_dev.j2</p>
-                    <pre><code>server {
-    listen    80;
-
-    server_name {{ hostname }};
-
-    root {{ docroot }};
-    index index.php;
-
-    access_log  /var/log/nginx/access.log;
-    error_log   /var/log/nginx/error.log info;
-
-    location / {
-        try_files $uri $uri/ /index.php?$args;
-    }
-
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
-        expires 24h;
-    }
-
-    location ~ \.php$ {
-    
-        fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
-        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-        include        fastcgi_params;
-    }
-
-    # deny access to .htaccess files, if Apache's document root
-    # concurs with nginx's one
-    #
-    location ~ /\.(ht|svn|git|sql) {
-        deny all;
-    }
-
-    sendfile off;
-}
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example Task (Nginx)</h2>
-                    <p class="filename">File: provisioners/roles/webserver/tasks/main.yml</p>
-                    <pre><code>---
-  - include_vars: "vars/{{ env }}.yml"
-  
-  - name: Nginx | Install Nginx
-    apt:
-      pkg=nginx
-      state=latest
-      force=yes
-    become: true
-  
-  - name: Nginx | Ensure Nginx is running
-    service: name=nginx state=started
-    become: true
-  
-  - name: Nginx | Check that path /var/www exists
-    file: dest=/var/www
-          state=directory
-          owner={{ system_user }}
-          group={{ system_user }}
-    become: true
-  
-  - name: Nginx | Copy host file
-    template: src="templates/local_dev_nginx-debian.j2"
-              dest=/etc/nginx/sites-available/default.conf
-              mode=0700
-    notify: nginx-restart
-    become: true
-
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example Task (PHP)</h2>
-                    <p class="filename">File: provisioners/roles/common/tasks/php.yml</p>
-                    <pre><code>---
-  - name: PHP | Install PHP7
-    apt: pkg={{ item }} state=latest force=yes
-    with_items:
-      - php7.2-fpm
-      - php7.2-mysql
-      - php7.2-cli
-      - php7.2-curl
-
-  - name: PHP | Copy PHP config file
-    copy: src="{{ templates_dir }}/php/php.ini" dest=/etc/php7.2/fpm/php.ini owner=root group=root force=yes
-    notify: 
-    - php-fpm-restart
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Example Handler (PHP)</h2>
-                    <p class="filename">File: provisioners/roles/common/handlers/php.yml</p>
-                    <pre><code>---
-  - name: php-fpm-start
-    service: name=php7.2-fpm state=started
-  
-  - name: php-fpm-restart
-    service: name=php7.2-fpm state=restarted
-  
-  - name: php-fpm-stop
-    service: name=php7.2-fpm state=stopped
-                    </code></pre>
-                </section>
-
-                <section>
-                    <h2>Ansible Hosts file</h2>
-                        <p>The `provisioners/ansible_hosts` file contains the list of servers that can be provisioned by Ansible. It is divided into groups to manage them as groups.</p>
-                    <pre class="shell">
-[local_dev]
-192.168.30.105 system_user=vagrant env=local_dev
-
-[staging]
-203.184.xxx.xxx system_user=ubuntu env=staging
-203.184.xxx.xxx system_user=ubuntu env=staging
-
-[prod]
-203.184.xxx.xxx system_user=ubuntu env=prod
-203.184.xxx.xxx system_user=ubuntu env=prod
-                    </pre>
-                </section>
-
-                <section>
-                    <h2>Running the Provisioner</h2>
-                    <h3 class="left-align">Run the script</h3>
-                    <pre class="shell">
-ansible-playbook provisioners/playbook.yml -i "provisioners/ansible_hosts" \
---private-key .vagrant/machines/default/virtualbox/private_key \
---limit local_dev
-                    </pre>
-                    <h3 class="left-align">Output</h3>
-                    <pre class="shell">
-TASK [webserver : Nginx | Install Nginx] ******************************************
-<span class="ok">OK: [192.168.30.105]</span>
-
-TASK [webserver : Nginx | Copy host file] *****************************************
-<span class="changed">changed: [192.168.30.105]</span>
-
-RUNNING HANDLER [php7 : php-restart] **********************************************
-<span class="failed">fatal: [192.168.30.105]: FAILED! => {"changed": false, "msg": "Unsupported par...</span>
-                    </pre>
-                </section>
-
-                <section data-transition="linear" data-background="#4d7e65" data-background-transition="slide">
-                    <h2>Live Demo</h2>
-                    <ul>
-                        <li>Create fresh working path</li>
-                        <li>Checkout project from Github</li>
-                        <li>Add record to /etc/hosts (192.168.30.105 ansible.pres)</li>
-                        <li>Run `vagrant up`</li>
-                        <li>Point browser to http://192.168.30.105/</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h3>Tool Links</h3>
-                    <ul>
-                        <li>Vagrant: <a href="http://vagrantup.com">www.vagrantup.com</a></li>
-                        <li>Vagrant boxes: <a href="http://www.vagrantbox.es/">www.vagrantbox.es/</a></li>
-                        <li>Ansible: <a href="http://www.ansible.com/home">www.ansible.com</a></li>
-                        <li>Debian webdev Vagrant/Ansible scripts: <a href="https://github.com/doublehops/debian-webdev-environment">github.com/doublehops/debian-webdev-environment</a></li>
-                    </ul>
                     <h3 class="margin-top-medium">Presentation Links</h3>
                     <ul>
-                        <li>This Reveal.js presentation: <a href="https://github.com/doublehops/ansible-presentation-provisioner">https://github.com/doublehops/ansible-presentation-provisioner</a></li>
-                        <li>The Ansible script: <a href="https://github.com/doublehops/ansible-presentation">https://github.com/doublehops/ansible-presentation</a></li>
+                        <li>This Reveal.js presentation: <a href="https://github.com/doublehops/sql-injection-presentation">https://github.com/doublehops/sql-injection-presentation</a></li>
+                        <li>The example host and application: <a href="https://github.com/doublehops/sql-injection-attack-example">https://github.com/doublehops/sql-injection-attack-example</a></li>
                     </ul>
                 </section>
 
                 <section>
                     <h1>THE END</h1>
-                    <h3 class="margin-top-medium">Damien Buttler</h3>
+                    <h3 class="margin-top-medium center">Damien Buttler</h3>
                     <ul>
                         <li>@doublehops</li>
                         <li>damien@doublehops.com</li>
